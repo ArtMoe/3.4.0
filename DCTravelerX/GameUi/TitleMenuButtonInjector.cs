@@ -1,6 +1,7 @@
 using System;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using DCTravelerX.GameUi;
 using FFXIVClientStructs.FFXIV.Component.GUI;
