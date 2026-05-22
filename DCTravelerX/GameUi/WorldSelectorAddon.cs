@@ -420,7 +420,7 @@ internal static class WorldSelectorHelper
         addon.Close();
 
         var message = sourceGroup != null
-            ? $"{sourceGroup.AreaName} - {sourceGroup.GroupName} > {targetGroup.AreaName} - {targetGroup.GroupName}"
+            ? $"{sourceGroup.AreaName} - {sourceGroup.GroupName} 》 {targetGroup.AreaName} - {targetGroup.GroupName}"
             : $"确认超域传送至 {targetGroup.AreaName} - {targetGroup.GroupName}";
 
         var result = await MessageBoxAddon.Show(
