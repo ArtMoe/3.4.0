@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Clone KamiToolKit
-        run: git clone --depth 1 https://github.com/MidoriKami/KamiToolKit.git KamiToolKit
+        run: git clone --depth 1 https://github.com/Dalamud-DailyRoutines/KamiToolKit.git KamiToolKit
 
       - name: Install .NET
         uses: actions/setup-dotnet@v5
@@ -37,19 +37,20 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
+          $dalamudPath = "$env:AppData\XIVLauncherCN\addon\Hooks\dev"
+
+          if (!(Test-Path $dalamudPath)) {
+            New-Item -ItemType Directory -Force -Path $dalamudPath | Out-Null
+          }
+
           Invoke-WebRequest `
             -Uri "https://github.com/ottercorp/dalamud-distrib/raw/refs/heads/main/stg/latest.zip" `
             -OutFile "latest.zip"
 
-          foreach ($path in @(
-            "$env:AppData\XIVLauncherCN\addon\Hooks\dev",
-            "$env:AppData\XIVLauncher\addon\Hooks\dev"
-          )) {
-            if (!(Test-Path $path)) {
-              New-Item -ItemType Directory -Force -Path $path | Out-Null
-            }
-            Expand-Archive -Force -Path "latest.zip" -DestinationPath $path
-          }
+          Expand-Archive `
+            -Force `
+            -Path "latest.zip" `
+            -DestinationPath $dalamudPath
 
       - name: Restore Dependencies
         run: dotnet restore DCTraveler.slnx
