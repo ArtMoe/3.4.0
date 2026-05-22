@@ -232,23 +232,7 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
 
     private static void OnAreaClicked(string areaName)
     {
-        Task.Run(async () =>
-        {
-            try
-            {
-                await GameFunctions.SelectDCAndLogin(areaName, true);
-            }
-            catch (Exception ex)
-            {
-                await MessageBoxWindow.Show(
-                    WindowManager.WindowSystem,
-                    "选择大区",
-                    $"大区切换失败:\n\n{ex.Message}",
-                    showWebsite: false
-                );
-                Service.Log.Error(ex, "大区切换失败");
-            }
-        });
+        DcGroupSelectorHelper.SelectDcAndLoginAsync(areaName);
     }
 
     protected override void OnHide(AtkUnitBase* addon) { }
@@ -272,5 +256,26 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
     public new void Dispose()
     {
         Close();
+    }
+}
+
+internal static class DcGroupSelectorHelper
+{
+    internal static async Task SelectDcAndLoginAsync(string areaName)
+    {
+        try
+        {
+            await GameFunctions.SelectDCAndLogin(areaName, true);
+        }
+        catch (Exception ex)
+        {
+            await MessageBoxWindow.Show(
+                WindowManager.WindowSystem,
+                "选择大区",
+                $"大区切换失败:\n\n{ex.Message}",
+                showWebsite: false
+            );
+            Service.Log.Error(ex, "大区切换失败");
+        }
     }
 }
