@@ -39,6 +39,7 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
     private TextButtonNode?     confirmButton;
 
     private TaskCompletionSource<SelectWorldResult?>? selectWorldTaskCompletionSource;
+    private bool _suppressOnHide;
 
     private const float ListWidth  = 140f;
     private const float ListHeight = 250f;
@@ -324,7 +325,8 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
         }
         else if (selectedGroup != null)
         {
-            // 传送模式：弹出确认对话框
+            // 传送模式：先抑制 OnHide，再弹出确认对话框
+            _suppressOnHide = true;
             WorldSelectorHelper.ConfirmTravelAsync(
                 pendingSourceGroup, selectedGroup, tcs, this
             );
@@ -339,7 +341,8 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
 
     protected override void OnHide(AtkUnitBase* addon)
     {
-        selectWorldTaskCompletionSource?.TrySetResult(null);
+        if (!_suppressOnHide)
+            selectWorldTaskCompletionSource?.TrySetResult(null);
     }
 
     // ─────────── 公共 API ───────────
@@ -413,30 +416,22 @@ internal static class WorldSelectorHelper
         TaskCompletionSource<SelectWorldResult?>? tcs,
         WorldSelectorAddon                       addon)
     {
+        // 先关闭服务器选择界面
+        addon.Close();
+
         var message = sourceGroup != null
-            ? BuildConfirmMessage(sourceGroup, targetGroup)
+            ? $"{sourceGroup.AreaName} - {sourceGroup.GroupName} > {targetGroup.AreaName} - {targetGroup.GroupName}"
             : $"确认超域传送至 {targetGroup.AreaName} - {targetGroup.GroupName}";
 
         var result = await MessageBoxAddon.Show(
-            "超域旅行",
+            "确认超域传送",
             message,
             MessageBoxType.YesNo
         );
 
         if (result == MessageBoxResult.Yes)
-        {
             tcs?.TrySetResult(new SelectWorldResult { Target = targetGroup });
-            addon.Close();
-        }
-    }
-
-    private static string BuildConfirmMessage(Group source, Group target)
-    {
-        var sameArea = string.Equals(source.AreaName, target.AreaName, StringComparison.Ordinal);
-
-        if (sameArea)
-            return $"确认超域传送\n{source.AreaName} - {source.GroupName} > {target.GroupName}";
-
-        return $"确认超域传送\n{source.AreaName} - {source.GroupName} > {target.AreaName} - {target.GroupName}";
+        else
+            tcs?.TrySetResult(null);
     }
 }
