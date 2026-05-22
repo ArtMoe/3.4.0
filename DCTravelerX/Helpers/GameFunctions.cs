@@ -1,0 +1,193 @@
+using System;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Dalamud.Utility;
+using DCTravelerX.Infos;
+using DCTravelerX.Managers;
+using FFXIVClientStructs.FFXIV.Application.Network;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Component.GUI;
+using Task = System.Threading.Tasks.Task;
+
+namespace DCTravelerX.Helpers;
+
+internal static class GameFunctions
+{
+    private static readonly ReturnToTitleDelegate       ReturnToTitlePtr;
+    private static readonly ReleaseLobbyContextDelegate ReleaseLobbyContextPtr;
+
+    static GameFunctions()
+    {
+        var returnToTitleAddr = Service.SigScanner.ScanText("E8 ?? ?? ?? ?? C6 87 ?? ?? ?? ?? ?? 33 C0");
+        ReturnToTitlePtr = Marshal.GetDelegateForFunctionPointer<ReturnToTitleDelegate>(returnToTitleAddr);
+
+        var releaseLobbyContextAddr = Service.SigScanner.ScanText("E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 48 8B 85 ?? ?? ?? ?? 48 85 C0");
+        ReleaseLobbyContextPtr = Marshal.GetDelegateForFunctionPointer<ReleaseLobbyContextDelegate>(releaseLobbyContextAddr);
+    }
+
+    public static unsafe void ReturnToTitle()
+    {
+        ReturnToTitlePtr(AgentLobby.Instance());
+        Service.Log.Information("返回标题界面");
+    }
+
+    public static unsafe void ResetTitleIdleTime() =>
+        AgentLobby.Instance()->IdleTime = 0;
+
+    public static unsafe void ToggleTitleLogo(bool isVisible)
+    {
+        var logoAddon = (AtkUnitBase*)Service.GameGui.GetAddonByName("_TitleLogo").Address;
+        if (logoAddon == null) return;
+
+        logoAddon->IsVisible = isVisible;
+    }
+
+    public static unsafe void ToggleTitleMenu(bool isVisible)
+    {
+        var addon = (AtkUnitBase*)Service.GameGui.GetAddonByName("_TitleMenu").Address;
+        if (addon == null) return;
+
+        addon->IsVisible = isVisible;
+    }
+
+    public static unsafe void RefreshGameServer()
+    {
+        var framework     = Framework.Instance();
+        var networkModule = framework->GetNetworkModuleProxy()->NetworkModule;
+        ReleaseLobbyContextPtr(networkModule);
+        var agentLobby     = AgentLobby.Instance();
+        var lobbyUIClient2 = (LobbyUIClientExposed*)Unsafe.AsPointer(ref agentLobby->LobbyData.LobbyUIClient);
+        lobbyUIClient2->Context = 0;
+        lobbyUIClient2->State   = 0;
+
+        Service.Log.Information("刷新大厅信息");
+    }
+
+    public static unsafe void ChangeDEVTestSID(string sid)
+    {
+        var agentLobby = AgentLobby.Instance();
+        agentLobby->UnkUtf8Strings[0].SetString(sid);
+        Service.Log.Information("筛选 Dev.TestSid");
+    }
+
+    public static unsafe void ChangeGameServer(string lobbyHost, string saveDataHost, string gmServerHost)
+    {
+        var framework     = Framework.Instance();
+        var networkModule = framework->GetNetworkModuleProxy()->NetworkModule;
+        networkModule->ActiveLobbyHost.SetString(lobbyHost);
+        networkModule->LobbyHosts[0].SetString(lobbyHost);
+        networkModule->SaveDataBankHost.SetString(saveDataHost);
+
+        for (var i = 0; i < framework->DevConfig.ConfigCount; ++i)
+        {
+            var entry = framework->DevConfig.ConfigEntry[i];
+            if (entry.Value.String == null) continue;
+
+            var name = entry.Name.ToString();
+
+            switch (name)
+            {
+                case "GMServerHost":
+                    entry.Value.String->SetString(gmServerHost);
+                    break;
+                case "SaveDataBankHost":
+                    entry.Value.String->SetString(saveDataHost);
+                    break;
+                case "LobbyHost01":
+                    entry.Value.String->SetString(lobbyHost);
+                    break;
+            }
+        }
+
+        Service.Log.Information($"修改游戏大厅地址: LobbyHost - {lobbyHost}, SaveDataBankHost - {saveDataHost}, GmHost - {gmServerHost}");
+    }
+
+    public static unsafe string GetGameArgument(string key)
+    {
+        if (!key.EndsWith('='))
+            key += "=";
+
+        var gameWindow = GameWindow.Instance();
+
+        for (var i = 0; i < gameWindow->ArgumentCount; i++)
+        {
+            var arg = gameWindow->ArgumentsSpan[i].ExtractText();
+            if (arg.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                return arg[key.Length..];
+        }
+
+        throw new Exception($"未能从游戏参数中获取 {key}");
+    }
+
+    public static int GetLauncherDCTravelPort()
+    {
+        var portString = GetGameArgument("XL.DcTraveler");
+
+        if (int.TryParse(portString, out var port))
+        {
+            Service.Log.Debug($"超域旅行用端口: {port}");
+            return port;
+        }
+
+        throw new Exception("未能发现用于超域旅行的端口");
+    }
+
+    public static unsafe void LoginInGame()
+    {
+        var addon = (AtkUnitBase*)Service.GameGui.GetAddonByName("_TitleMenu").Address;
+        if (addon == null) return;
+
+        var loginGameButton      = addon->GetComponentButtonById(4);
+        var loginGameButtonEvent = loginGameButton->AtkResNode->AtkEventManager.Event;
+        Service.Framework.RunOnFrameworkThread(() => addon->ReceiveEvent(AtkEventType.ButtonClick, 1, loginGameButtonEvent));
+    }
+
+    public static void ChangeToSdoArea(string groupName)
+    {
+        var targetArea = ServerDataManager.SdoAreas?.FirstOrDefault(x => x.AreaName == groupName);
+
+        if (targetArea == null)
+        {
+            Service.Log.Error($"未找到大区: {groupName}");
+            return;
+        }
+
+        _ = DCTravelClient.Instance().SetSdoArea(groupName);
+        ChangeGameServer(targetArea.AreaLobby, targetArea.AreaConfigUpload, targetArea.AreaGm);
+        RefreshGameServer();
+    }
+
+    public static unsafe string? GetCurrentSdoAreaName()
+    {
+        if (ServerDataManager.SdoAreas is not { Length: > 0 })
+            return null;
+
+        var framework     = Framework.Instance();
+        var networkModule = framework->GetNetworkModuleProxy()->NetworkModule;
+        var lobbyHost     = networkModule->ActiveLobbyHost.ToString();
+
+        if (lobbyHost.IsNullOrWhitespace())
+            return null;
+
+        return ServerDataManager.SdoAreas
+                                .FirstOrDefault(x => string.Equals(x.AreaLobby, lobbyHost, StringComparison.OrdinalIgnoreCase))
+                                ?.AreaName;
+    }
+
+    public static async Task SelectDCAndLogin(string name, bool needLogin)
+    {
+        var newTicket = await DCTravelClient.Instance().RefreshGameSessionId();
+
+        ChangeToSdoArea(name);
+        ChangeDEVTestSID(newTicket);
+        await WaitAddonManager.Close();
+        if (needLogin)
+            await Service.Framework.RunOnFrameworkThread(LoginInGame);
+    }
+
+    private unsafe delegate void ReturnToTitleDelegate(AgentLobby* agentLobby);
+
+    private unsafe delegate void ReleaseLobbyContextDelegate(NetworkModule* agentLobby);
+}
