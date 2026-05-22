@@ -37,7 +37,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          $dalamudPath = "$env:AppData\XIVLauncher\addon\Hooks\dev"
+          $dalamudPath = "$env:AppData\XIVLauncherCN\addon\Hooks\dev"
 
           if (!(Test-Path $dalamudPath)) {
             New-Item -ItemType Directory -Force -Path $dalamudPath | Out-Null
