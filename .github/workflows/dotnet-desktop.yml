@@ -1,0 +1,81 @@
+name: Build DCTravelerX - Dalamud STG
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - '*'
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Clone KamiToolKit
+        run: git clone --depth 1 https://github.com/MidoriKami/KamiToolKit.git KamiToolKit
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Download Dalamud
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $dalamudPath = "$env:AppData\XIVLauncher\addon\Hooks\dev"
+
+          if (!(Test-Path $dalamudPath)) {
+            New-Item -ItemType Directory -Force -Path $dalamudPath | Out-Null
+          }
+
+          Invoke-WebRequest `
+            -Uri "https://github.com/ottercorp/dalamud-distrib/raw/refs/heads/main/stg/latest.zip" `
+            -OutFile "latest.zip"
+
+          Expand-Archive `
+            -Force `
+            -Path "latest.zip" `
+            -DestinationPath $dalamudPath
+
+      - name: Restore Dependencies
+        run: dotnet restore DCTraveler.slnx
+
+      - name: Build DCTravelerX
+        run: |
+          dotnet build DCTraveler.slnx `
+            --no-restore `
+            -c Release `
+            /p:DebugType=None `
+            /p:DebugSymbols=false `
+            /p:Version=0.0.0.1
+
+      - name: Zip Release
+        uses: TheDoctor0/zip-release@0.7.6
+        with:
+          type: zip
+          filename: DCTravelerX.zip
+          path: ./DCTravelerX/bin/x64/Release/
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DCTravelerX
+          if-no-files-found: error
+          path: |
+            ./DCTravelerX.zip
+            ./DCTravelerX/bin/x64/Release/**
