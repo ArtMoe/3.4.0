@@ -64,12 +64,16 @@ jobs:
             /p:DebugSymbols=false `
             /p:Version=0.0.0.1
 
+      - name: List Build Output
+        run: |
+          dir bin /s
+
       - name: Zip Release
         uses: TheDoctor0/zip-release@0.7.6
         with:
           type: zip
           filename: DCTravelerX.zip
-          path: ./DCTravelerX/bin/x64/Release/
+          path: ./bin/x64/Release/
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
@@ -78,4 +82,4 @@ jobs:
           if-no-files-found: error
           path: |
             ./DCTravelerX.zip
-            ./DCTravelerX/bin/x64/Release/**
+            ./bin/x64/Release/**
