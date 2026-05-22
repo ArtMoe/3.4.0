@@ -28,6 +28,7 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
     private readonly List<SimpleNineGridNode>         overlayNodes   = [];
     private readonly List<IconImageNode>              bgImageNodes   = [];
     private readonly Dictionary<IconImageNode, uint>  originalIconIds = [];
+    private static DcGroupSelectorAddon? CurrentInstance;
 
     protected override void OnSetup(AtkUnitBase* addon, Span<AtkValue> atkValueSpan)
     {
@@ -233,9 +234,13 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
     private static void OnAreaClicked(string areaName)
     {
         DcGroupSelectorHelper.SelectDcAndLoginAsync(areaName);
+        CurrentInstance?.Close();
     }
 
-    protected override void OnHide(AtkUnitBase* addon) { }
+    protected override void OnHide(AtkUnitBase* addon)
+    {
+        CurrentInstance = null;
+    }
 
     protected override void OnFinalize(AtkUnitBase* addon)
     {
@@ -244,12 +249,16 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
 
     public static void Show()
     {
+        if (CurrentInstance != null && CurrentInstance.IsOpen)
+            return;
+
         var addon = new DcGroupSelectorAddon
         {
             InternalName = $"DCTravelerXDcGroupSelector_{Guid.NewGuid():N}",
             Title        = "大区选择",
         };
 
+        CurrentInstance = addon;
         addon.Open();
     }
 

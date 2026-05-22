@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DCTravelerX.Infos;
+using DCTravelerX.Managers;
+using DCTravelerX.Windows.MessageBox;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using KamiToolKit;
 using KamiToolKit.Classes;
@@ -13,7 +15,7 @@ namespace DCTravelerX.GameUi;
 
 internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
 {
-    private static readonly string[] DcStates = ["通畅", "热门", "火爆?"];
+    private static readonly string[] DcStates = { "通畅", "热门", "火爆?" };
 
     // 上次选择（按模式分别存储）
     private static int LastSourceAreaIndex;
@@ -26,6 +28,7 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
     private int        pendingServerIndex;
     private bool       pendingIsBack;
     private bool       pendingIsSourceMode;
+    private Group?     pendingSourceGroup;
 
     private int currentAreaIndex  = -1;
     private int currentServerIndex = -1;
@@ -46,6 +49,8 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
 
     protected override void OnSetup(AtkUnitBase* addon, Span<AtkValue> atkValueSpan)
     {
+        SetWindowSize(320f, 370f);
+
         titleLabel  = null;
         areaListNode = null;
         serverListNode = null;
@@ -309,14 +314,22 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
                 selectedGroup = pendingAreas[currentAreaIndex].GroupList[currentServerIndex];
         }
 
-        var result = new SelectWorldResult();
-        if (pendingIsSourceMode)
-            result.Source = selectedGroup;
-        else
-            result.Target = selectedGroup;
+        var tcs = selectWorldTaskCompletionSource;
 
-        selectWorldTaskCompletionSource?.TrySetResult(result);
-        Close();
+        if (pendingIsSourceMode)
+        {
+            // 返回模式：选源服务器，直接确认
+            var result = new SelectWorldResult { Source = selectedGroup };
+            tcs?.TrySetResult(result);
+            Close();
+        }
+        else if (selectedGroup != null)
+        {
+            // 传送模式：弹出确认对话框
+            WorldSelectorHelper.ConfirmTravelAsync(
+                pendingSourceGroup, selectedGroup, tcs, this
+            );
+        }
     }
 
     private void OnCancelClicked()
@@ -345,6 +358,7 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
         pendingAreas      = areas.ToList();
         pendingIsBack     = isBack;
         pendingIsSourceMode = showSourceWorld && !showTargetWorld;
+        pendingSourceGroup = sourceGroup;
 
         var targetIndexGroup = pendingIsSourceMode ? sourceGroup : targetGroup;
         pendingAreaIndex = pendingAreas.FindIndex(x => x.AreaId == targetIndexGroup?.AreaId);
@@ -389,5 +403,42 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
     {
         selectWorldTaskCompletionSource?.TrySetResult(null);
         Close();
+    }
+}
+
+internal static class WorldSelectorHelper
+{
+    internal static async Task ConfirmTravelAsync(
+        Group?                                   sourceGroup,
+        Group                                    targetGroup,
+        TaskCompletionSource<SelectWorldResult?>? tcs,
+        WorldSelectorAddon                       addon)
+    {
+        var message = sourceGroup != null
+            ? BuildConfirmMessage(sourceGroup, targetGroup)
+            : $"确认超域传送至 {targetGroup.AreaName} - {targetGroup.GroupName}";
+
+        var result = await MessageBoxWindow.Show(
+            WindowManager.WindowSystem,
+            "超域旅行",
+            message,
+            MessageBoxType.YesNo
+        );
+
+        if (result == MessageBoxResult.Yes)
+        {
+            tcs?.TrySetResult(new SelectWorldResult { Target = targetGroup });
+            addon.Close();
+        }
+    }
+
+    private static string BuildConfirmMessage(Group source, Group target)
+    {
+        var sameArea = string.Equals(source.AreaName, target.AreaName, StringComparison.Ordinal);
+
+        if (sameArea)
+            return $"确认超域传送\n{source.AreaName} - {source.GroupName} > {target.GroupName}";
+
+        return $"确认超域传送\n{source.AreaName} - {source.GroupName} > {target.AreaName} - {target.GroupName}";
     }
 }
