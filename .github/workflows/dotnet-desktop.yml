@@ -65,8 +65,13 @@ jobs:
             /p:Version=0.0.0.1
 
       - name: List Build Output
+        shell: pwsh
         run: |
-          dir bin /s
+          if (Test-Path "./bin") {
+            Get-ChildItem -Path ./bin -Recurse
+          } else {
+            Write-Host "bin folder not found"
+          }
 
       - name: Zip Release
         uses: TheDoctor0/zip-release@0.7.6
