@@ -5,8 +5,6 @@ using System.Numerics;
 using System.Threading.Tasks;
 using DCTravelerX.Helpers;
 using DCTravelerX.Infos;
-using DCTravelerX.Managers;
-using DCTravelerX.Windows.MessageBox;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using KamiToolKit;
 using KamiToolKit.Classes;
@@ -278,11 +276,9 @@ internal static class DcGroupSelectorHelper
         }
         catch (Exception ex)
         {
-            await MessageBoxWindow.Show(
-                WindowManager.WindowSystem,
+            await MessageBoxAddon.Show(
                 "选择大区",
-                $"大区切换失败:\n\n{ex.Message}",
-                showWebsite: false
+                $"大区切换失败:\n\n{ex.Message}"
             );
             Service.Log.Error(ex, "大区切换失败");
         }

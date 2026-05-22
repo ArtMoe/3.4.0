@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DCTravelerX.Infos;
-using DCTravelerX.Managers;
-using DCTravelerX.Windows.MessageBox;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using KamiToolKit;
 using KamiToolKit.Classes;
@@ -418,8 +416,7 @@ internal static class WorldSelectorHelper
             ? BuildConfirmMessage(sourceGroup, targetGroup)
             : $"确认超域传送至 {targetGroup.AreaName} - {targetGroup.GroupName}";
 
-        var result = await MessageBoxWindow.Show(
-            WindowManager.WindowSystem,
+        var result = await MessageBoxAddon.Show(
             "超域旅行",
             message,
             MessageBoxType.YesNo
