@@ -183,11 +183,11 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
     private static void SetButtonText(AtkTextNode* textNode)
     {
         if (textNode == null) return;
-    
+
         var seString = new SeStringBuilder()
             .Append("大区选择")
             .Build();
-    
+
         textNode->SetText(seString.Encode());
     }
 
@@ -307,6 +307,39 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
         }
     }
 
+    private static void FixButtonCollisions(AtkUnitBase* addon)
+    {
+        var containerNode = addon->GetNodeById(ContainerNodeId);
+        if (containerNode == null) return;
+
+        var currentNode = containerNode->ChildNode;
+        while (currentNode != null)
+        {
+            if (currentNode->Type == unchecked((NodeType)1001))
+            {
+                var componentNode = (AtkComponentNode*)currentNode;
+                if (componentNode->Component != null)
+                {
+                    var btn        = (AtkComponentButton*)componentNode->Component;
+                    var uldManager = &btn->AtkComponentBase.UldManager;
+                    for (uint i = 0; i < uldManager->NodeListCount; i++)
+                    {
+                        var childNode = uldManager->NodeList[i];
+                        if (childNode != null && childNode->Type == NodeType.Collision)
+                        {
+                            var collision = (AtkCollisionNode*)childNode;
+                            collision->AtkResNode.SetPositionFloat(
+                                currentNode->X + collision->AtkResNode.X,
+                                currentNode->Y + collision->AtkResNode.Y
+                            );
+                        }
+                    }
+                }
+            }
+            currentNode = currentNode->PrevSiblingNode;
+        }
+    }
+
     private void ScheduleAlphaFix()
     {
         for (var i = 0; i <= AlphaFixDurationTicks; i++)
@@ -318,7 +351,10 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
                 {
                     var addon = Service.GameGui.GetAddonByName("_TitleMenu").Address;
                     if (addon != nint.Zero)
+                    {
                         FixButtonAlphas((AtkUnitBase*)addon);
+                        FixButtonCollisions((AtkUnitBase*)addon);
+                    }
                 }
                 catch { }
             }, delayTicks: tickDelay);
