@@ -59,7 +59,6 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
             }
 
             SetupDcButton(dcButton, firstButton);
-            addon->UpdateCollisionNodeList(false);
             ScheduleAlphaFix();
 
             Service.Log.Information("DC Travel button enabled in _TitleMenu");
@@ -319,7 +318,11 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
                 {
                     var addon = Service.GameGui.GetAddonByName("_TitleMenu").Address;
                     if (addon != nint.Zero)
-                        FixButtonAlphas((AtkUnitBase*)addon);
+                    {
+                        var addonPtr = (AtkUnitBase*)addon;
+                        FixButtonAlphas(addonPtr);
+                        addonPtr->UpdateCollisionNodeList(false);
+                    }
                 }
                 catch { }
             }, delayTicks: tickDelay);
