@@ -40,6 +40,9 @@ public class Service
     internal static IFramework Framework { get; private set; } = null!;
 
     [PluginService]
+    internal static ITitleScreenMenu TitleScreenMenu { get; private set; } = null!;
+
+    [PluginService]
     internal static IKeyState KeyState { get; private set; } = null!;
 
     internal static IDalamudPluginInterface PI        { get; private set; } = null!;
