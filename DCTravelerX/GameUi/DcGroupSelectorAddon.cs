@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
+using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using DCTravelerX.Helpers;
 using DCTravelerX.Infos;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -238,6 +240,7 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
     protected override void OnHide(AtkUnitBase* addon)
     {
         CurrentInstance = null;
+        Service.AddonLifecycle.UnregisterListener(OnTitleMenuFinalize);
     }
 
     protected override void OnFinalize(AtkUnitBase* addon)
@@ -258,11 +261,20 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
 
         CurrentInstance = addon;
         addon.Open();
+
+        // 监听 _TitleMenu 销毁，离开标题界面时自动关闭
+        Service.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_TitleMenu", OnTitleMenuFinalize);
     }
 
     public new void Dispose()
     {
+        Service.AddonLifecycle.UnregisterListener(OnTitleMenuFinalize);
         Close();
+    }
+
+    private static void OnTitleMenuFinalize(AddonEvent type, AddonArgs args)
+    {
+        CurrentInstance?.Close();
     }
 }
 
