@@ -183,14 +183,11 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
     private static void SetButtonText(AtkTextNode* textNode)
     {
         if (textNode == null) return;
-
-        var icon = (char)SeIconChar.BoxedLetterD;
+    
         var seString = new SeStringBuilder()
-            .AddUiForeground(539)
-            .Append(icon.ToString())
-            .AddUiForegroundOff()
-            .Append(" 大区选择")
+            .Append("大区选择")
             .Build();
+    
         textNode->SetText(seString.Encode());
     }
 
