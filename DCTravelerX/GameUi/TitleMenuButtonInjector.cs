@@ -92,9 +92,14 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
         dcButtonNode->NodeFlags |= NodeFlags.Visible | NodeFlags.Enabled;
         dcButtonNode->Color.A = 255;
         dcButtonNode->ToggleVisibility(true);
-
-        dcButtonNode->SetPositionFloat(0, 3);
-        refBtnNode->SetPositionFloat(0, -26);
+        
+        var startX = refBtnNode->X;
+        var startY = refBtnNode->Y;
+        
+        dcButtonNode->SetPositionFloat(
+            startX,
+            startY + 29
+        );
 
         AtkCollisionNode* dcCollision = null;
         AtkResNode*       dcBgRes     = null;
@@ -318,11 +323,7 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
                 {
                     var addon = Service.GameGui.GetAddonByName("_TitleMenu").Address;
                     if (addon != nint.Zero)
-                    {
-                        var addonPtr = (AtkUnitBase*)addon;
-                        FixButtonAlphas(addonPtr);
-                        addonPtr->UpdateCollisionNodeList(false);
-                    }
+                        FixButtonAlphas((AtkUnitBase*)addon);
                 }
                 catch { }
             }, delayTicks: tickDelay);
