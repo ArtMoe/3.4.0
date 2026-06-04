@@ -186,6 +186,7 @@ internal unsafe class MessageBoxAddon : NativeAddon, IDisposable
         {
             InternalName = $"DCTravelerXMessageBox_{Guid.NewGuid():N}",
             Title        = title,
+            Subtitle     = "",
         };
 
         addon.pendingMessage = message;

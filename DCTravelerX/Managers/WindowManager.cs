@@ -16,6 +16,7 @@ public class WindowManager
         {
             InternalName = "DCTravelerXWorldSelector",
             Title        = "超域传送",
+            Subtitle     = "",
         };
 
         InternalWindows.Init();
