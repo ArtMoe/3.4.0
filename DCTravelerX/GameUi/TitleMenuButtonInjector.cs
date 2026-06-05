@@ -106,7 +106,7 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
 
         // 定位按钮（与 DcTraveler 一致）：开始游戏上移，DC 按钮在其下方
         dcButtonNode->SetPositionFloat(0, 3);
-        refBtnNode->SetPositionFloat(0, -26);
+        refBtnNode->SetPositionFloat(0, -30);
 
         // 查找子节点
         AtkCollisionNode* dcCollision = null;
@@ -333,7 +333,7 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
         if (dcButtonNode != null)
             dcButtonNode->SetPositionFloat(0, 3);
         if (refBtnNode != null)
-            refBtnNode->SetPositionFloat(0, -26);
+            refBtnNode->SetPositionFloat(0, -30);
 
         var containerNode = addon->GetNodeById(ContainerNodeId);
         if (containerNode == null) return;
