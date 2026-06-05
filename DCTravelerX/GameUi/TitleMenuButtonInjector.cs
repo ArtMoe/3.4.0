@@ -26,16 +26,13 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
     // 按钮状态
     private AtkComponentButton* dcButton;
     private AtkResNode* dcButtonNode;
+    private AtkResNode* refBtnNode;
     private AtkCollisionNode* dcButtonCollision;
     private AtkResNode* dcBgResNode;
     private AtkResNode* dcTextResNode;
     private CustomEventListener? eventListener;
     private bool isMouseDown;
     private bool isInitialized;
-
-    // 用于持续修复碰撞位置
-    private AtkResNode* refBtnNode;
-    private AtkCollisionNode* refBtnCollision;
 
     public TitleMenuButtonInjector()
     {
@@ -107,7 +104,7 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
         dcButtonNode->Color.A = 255;
         dcButtonNode->ToggleVisibility(true);
 
-        // 定位按钮：开始游戏上移，DC 按钮在其下方
+        // 定位按钮（与 DcTraveler 一致）：开始游戏上移，DC 按钮在其下方
         dcButtonNode->SetPositionFloat(0, 3);
         refBtnNode->SetPositionFloat(0, -26);
 
@@ -132,11 +129,6 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
 
         // 设置碰撞节点以支持鼠标交互
         SetupCollisionNode(dcCollision);
-
-        // 同步"开始游戏"按钮的碰撞位置
-        refBtnCollision = refCollision;
-        if (refBtnCollision != null)
-            refBtnCollision->AtkResNode.Y = -26;
 
         // 从参考按钮复制时间线动画
         CopyTimelines(dcCollision, dcBgRes, dcTextRes, dcText, refCollision, refBgRes, refTextRes, refText);
@@ -333,7 +325,7 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
 
     /// <summary>
     /// 修复游戏在显示隐藏 DC 按钮时错误修改的按钮子节点 Alpha 值，
-    /// 并持续同步按钮位置和碰撞节点位置。
+    /// 并持续同步按钮位置。
     /// </summary>
     private void FixButtonAlphas(AtkUnitBase* addon)
     {
@@ -342,10 +334,6 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
             dcButtonNode->SetPositionFloat(0, 3);
         if (refBtnNode != null)
             refBtnNode->SetPositionFloat(0, -26);
-
-        // 持续同步碰撞节点位置
-        if (refBtnCollision != null)
-            refBtnCollision->AtkResNode.Y = -26;
 
         var containerNode = addon->GetNodeById(ContainerNodeId);
         if (containerNode == null) return;
@@ -412,11 +400,10 @@ internal unsafe class TitleMenuButtonInjector : IDisposable
         eventListener = null;
         dcButton = null;
         dcButtonNode = null;
+        refBtnNode = null;
         dcButtonCollision = null;
         dcBgResNode = null;
         dcTextResNode = null;
-        refBtnNode = null;
-        refBtnCollision = null;
         isInitialized = false;
     }
 
