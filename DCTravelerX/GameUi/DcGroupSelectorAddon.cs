@@ -257,7 +257,6 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
         {
             InternalName = $"DCTravelerXDcGroupSelector_{Guid.NewGuid():N}",
             Title        = "大区选择",
-            Subtitle     = "",
         };
 
         CurrentInstance = addon;

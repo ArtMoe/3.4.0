@@ -3,6 +3,7 @@ using Dalamud.Interface;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using DCTravelerX.GameUi;
 using DCTravelerX.Helpers;
 using DCTravelerX.Infos;
 using DCTravelerX.Managers;
@@ -48,6 +49,7 @@ public class Service
     internal static IDalamudPluginInterface PI        { get; private set; } = null!;
     internal static IUiBuilder              UIBuilder { get; private set; } = null!;
     internal static Configuration           Config    { get; private set; } = null!;
+    internal static TitleMenuButtonInjector? TitleMenuButtonInjector { get; private set; }
 
     public static void Init(IDalamudPluginInterface pi)
     {
@@ -65,6 +67,7 @@ public class Service
             FontManager.Init();
             WindowManager.Init();
             TitleScreenButtonManager.Init();
+            TitleMenuButtonInjector = new TitleMenuButtonInjector();
             ContextMenuManager.Init();
             IPCManager.Init();
 
@@ -82,6 +85,8 @@ public class Service
         IPCManager.Uninit();
         DCTravelClient.Instance().IsDisposed = true;
         ContextMenuManager.Uninit();
+        TitleMenuButtonInjector?.Dispose();
+        TitleMenuButtonInjector = null;
         TitleScreenButtonManager.Uninit();
         WindowManager.Uninit();
         FontManager.Uninit();
