@@ -328,7 +328,7 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
         {
             // 传送模式：先抑制 OnHide，再弹出确认对话框
             _suppressOnHide = true;
-            WorldSelectorHelper.ConfirmTravelAsync(
+            _ = WorldSelectorHelper.ConfirmTravelAsync(
                 pendingSourceGroup, selectedGroup, tcs, this
             );
         }

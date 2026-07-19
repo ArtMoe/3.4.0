@@ -185,14 +185,14 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
             Anchor     = VerticalListAnchor.Top,
         };
 
-        columnNode.CollisionNode.ShowClickableCursor = true;
-        columnNode.CollisionNode.AddEvent(AtkEventType.MouseClick, () => OnAreaClicked(area.AreaName));
-        columnNode.CollisionNode.AddEvent(AtkEventType.MouseOver, () =>
+        columnNode.ShowClickableCursor = true;
+        columnNode.AddEvent(AtkEventType.MouseClick, () => OnAreaClicked(area.AreaName));
+        columnNode.AddEvent(AtkEventType.MouseOver, () =>
         {
             overlay.MultiplyColor = new Vector3(16, 16, 16);
             bgImage.Alpha         = 0.4f;
         });
-        columnNode.CollisionNode.AddEvent(AtkEventType.MouseOut, () =>
+        columnNode.AddEvent(AtkEventType.MouseOut, () =>
         {
             overlay.MultiplyColor = new Vector3(0, 0, 0);
             bgImage.Alpha         = 0.2f;
@@ -234,7 +234,7 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
 
     private static void OnAreaClicked(string areaName)
     {
-        DcGroupSelectorHelper.SelectDcAndLoginAsync(areaName);
+        _ = DcGroupSelectorHelper.SelectDcAndLoginAsync(areaName);
         CurrentInstance?.Close();
     }
 
