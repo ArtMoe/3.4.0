@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DCTravelerX.Windows.MessageBox;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using KamiToolKit;
+using KamiToolKit.BaseTypes;
 using KamiToolKit.Classes;
 using KamiToolKit.Enums;
 using KamiToolKit.Nodes;
