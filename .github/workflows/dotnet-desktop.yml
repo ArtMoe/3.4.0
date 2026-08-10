@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
 
       - name: Clone KamiToolKit
-        run: git clone --depth 1 https://github.com/Dalamud-DailyRoutines/KamiToolKit.git KamiToolKit
+        run: git clone https://github.com/Dalamud-DailyRoutines/KamiToolKit.git KamiToolKit && cd KamiToolKit && git checkout 15df177
 
       - name: Install .NET
         uses: actions/setup-dotnet@v5
