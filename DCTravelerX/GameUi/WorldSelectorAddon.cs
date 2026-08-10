@@ -40,6 +40,8 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
 
     private TaskCompletionSource<SelectWorldResult?>? selectWorldTaskCompletionSource;
     private bool _suppressOnHide;
+    private bool _isClosing;
+    private bool _isRebuilding;
 
     private const float ListWidth  = 140f;
     private const float ListHeight = 250f;
@@ -224,6 +226,7 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
 
     protected override void OnFinalize(AtkUnitBase* addon)
     {
+        _isClosing   = true;
         titleLabel     = null;
         areaListNode   = null;
         serverListNode = null;
@@ -234,59 +237,79 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
 
     private void OnAreaSelected(int index)
     {
-        currentAreaIndex  = index;
-        currentServerIndex = 0;
+        if (_isClosing || _isRebuilding)
+            return;
 
-        if (pendingIsSourceMode)
+        _isRebuilding = true;
+        try
         {
-            LastSourceAreaIndex   = currentAreaIndex;
-            LastSourceServerIndex = currentServerIndex;
-        }
-        else
-        {
-            LastTargetAreaIndex   = currentAreaIndex;
-            LastTargetServerIndex = currentServerIndex;
-        }
+            currentAreaIndex  = index;
+            currentServerIndex = 0;
 
-        // 更新大区选中态
-        if (areaListNode != null)
-        {
-            var i = 0;
-            foreach (var node in areaListNode.GetNodes<ListButtonNode>())
+            if (pendingIsSourceMode)
             {
-                node.Selected = i == currentAreaIndex;
-                i++;
+                LastSourceAreaIndex   = currentAreaIndex;
+                LastSourceServerIndex = currentServerIndex;
             }
-        }
-
-        // 重建服务器列表
-        if (serverListNode != null)
-        {
-            serverListNode.Clear();
-
-            if (currentAreaIndex >= 0 && currentAreaIndex < pendingAreas.Count)
+            else
             {
-                var groupList = pendingAreas[currentAreaIndex].GroupList;
-                for (var i = 0; i < groupList.Count; i++)
-                {
-                    var idx    = i;
-                    var sel    = i == currentServerIndex;
-                    var group  = groupList[i];
+                LastTargetAreaIndex   = currentAreaIndex;
+                LastTargetServerIndex = currentServerIndex;
+            }
 
-                    serverListNode.AddNode(new ListButtonNode
-                    {
-                        String   = group.GroupName,
-                        Height   = ItemHeight,
-                        Selected = sel,
-                        OnClick  = () => OnServerSelected(idx),
-                    });
+            // 更新大区选中态（仅改标记，不触碰节点树）
+            if (areaListNode != null)
+            {
+                var i = 0;
+                foreach (var node in areaListNode.GetNodes<ListButtonNode>())
+                {
+                    node.Selected = i == currentAreaIndex;
+                    i++;
                 }
             }
+
+            // 服务器列表销毁/重建延后到下一帧，避免在原生点击事件处理栈内执行节点释放
+            if (serverListNode != null)
+                Service.Framework.RunOnFrameworkThread(RebuildServerList);
+        }
+        finally
+        {
+            _isRebuilding = false;
+        }
+    }
+
+    private void RebuildServerList()
+    {
+        if (_isClosing || serverListNode is null)
+            return;
+
+        serverListNode.Clear();
+
+        if (currentAreaIndex < 0 || currentAreaIndex >= pendingAreas.Count)
+            return;
+
+        var groupList = pendingAreas[currentAreaIndex].GroupList;
+        for (var i = 0; i < groupList.Count; i++)
+        {
+            var idx   = i;
+            var sel   = i == currentServerIndex;
+            var group = groupList[i];
+
+            serverListNode.AddNode(new ListButtonNode
+            {
+                String   = group.GroupName,
+                Height   = ItemHeight,
+                Selected = sel,
+                OnClick  = () => OnServerSelected(idx),
+            });
         }
     }
 
     private void OnServerSelected(int index)
     {
+        if (_isClosing)
+            return;
+
         currentServerIndex = index;
 
         if (pendingIsSourceMode)
@@ -307,6 +330,10 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
 
     private void OnConfirmClicked()
     {
+        if (_isClosing)
+            return;
+        _isClosing = true;
+
         Group? selectedGroup = null;
         if (currentAreaIndex >= 0 && currentAreaIndex < pendingAreas.Count)
         {
@@ -335,6 +362,10 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
 
     private void OnCancelClicked()
     {
+        if (_isClosing)
+            return;
+        _isClosing = true;
+
         selectWorldTaskCompletionSource?.TrySetResult(null);
         Close();
     }
@@ -355,6 +386,7 @@ internal unsafe class WorldSelectorAddon : NativeAddon, IDisposable
         Group?                 sourceGroup = null,
         Group?                 targetGroup = null)
     {
+        _isClosing = false;
         selectWorldTaskCompletionSource = new TaskCompletionSource<SelectWorldResult?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         pendingAreas      = areas.ToList();

@@ -29,6 +29,7 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
     private readonly List<IconImageNode>              bgImageNodes   = [];
     private readonly Dictionary<IconImageNode, uint>  originalIconIds = [];
     private static DcGroupSelectorAddon? CurrentInstance;
+    private static bool isActive;
 
     protected override void OnSetup(AtkUnitBase* addon, Span<AtkValue> atkValueSpan)
     {
@@ -188,11 +189,13 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
         columnNode.CollisionNode.AddEvent(AtkEventType.MouseClick, () => OnAreaClicked(area.AreaName));
         columnNode.CollisionNode.AddEvent(AtkEventType.MouseOver, () =>
         {
+            if (CurrentInstance is not { IsOpen: true }) return;
             overlay.MultiplyColor = new Vector3(16, 16, 16);
             bgImage.Alpha         = 0.4f;
         });
         columnNode.CollisionNode.AddEvent(AtkEventType.MouseOut, () =>
         {
+            if (CurrentInstance is not { IsOpen: true }) return;
             overlay.MultiplyColor = new Vector3(0, 0, 0);
             bgImage.Alpha         = 0.2f;
         });
@@ -233,8 +236,13 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
 
     private static void OnAreaClicked(string areaName)
     {
+        // 窗口已关闭/正在关闭时的残留点击直接丢弃
+        if (CurrentInstance is null || !CurrentInstance.IsOpen || isActive)
+            return;
+
+        isActive = true;
         DcGroupSelectorHelper.SelectDcAndLoginAsync(areaName);
-        CurrentInstance?.Close();
+        CurrentInstance.Close();
     }
 
     protected override void OnHide(AtkUnitBase* addon)
@@ -260,6 +268,7 @@ internal unsafe class DcGroupSelectorAddon : NativeAddon, IDisposable
         };
 
         CurrentInstance = addon;
+        isActive        = false;
         addon.Open();
 
         // 监听 _TitleMenu 销毁，离开标题界面时自动关闭

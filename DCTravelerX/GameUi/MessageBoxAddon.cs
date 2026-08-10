@@ -17,6 +17,7 @@ internal unsafe class MessageBoxAddon : NativeAddon, IDisposable
     private VerticalListNode? rootNode;
 
     private TaskCompletionSource<MessageBoxResult>? messageTaskCompletionSource;
+    private bool isClosing;
 
     private MessageBoxType pendingType          = MessageBoxType.Ok;
     private string         pendingMessage        = string.Empty;
@@ -162,17 +163,23 @@ internal unsafe class MessageBoxAddon : NativeAddon, IDisposable
 
     private void CloseWithResult(MessageBoxResult result)
     {
+        if (isClosing)
+            return;
+
+        isClosing = true;
         messageTaskCompletionSource?.TrySetResult(result);
         Close();
     }
 
     protected override void OnHide(AtkUnitBase* addon)
     {
+        isClosing = true;
         messageTaskCompletionSource?.TrySetResult(MessageBoxResult.None);
     }
 
     protected override void OnFinalize(AtkUnitBase* addon)
     {
+        isClosing   = true;
         messageNode = null;
         rootNode    = null;
     }
